@@ -11,10 +11,12 @@ public class CharacterController2D : MonoBehaviour
 
     private Rigidbody2D rb;
     private bool isGrounded;
+    private Animator animator;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
     }
 
     void Update()
@@ -27,8 +29,17 @@ public class CharacterController2D : MonoBehaviour
 
     private void Move()
     {
-        float moveInput = Input.GetAxis("Horizontal");
+        float moveInput = Input.GetAxisRaw("Horizontal");
         rb.linearVelocity = new Vector2(moveInput * moveSpeed, rb.linearVelocity.y);
+        
+        // Flip the character based on movement direction
+        if (moveInput != 0)
+        {
+            transform.localScale = new Vector3(Mathf.Sign(moveInput), 1f, 1f);
+        }
+
+        // Set the isWalking parameter based on movement
+        animator.SetBool("isWalking", moveInput != 0);
     }
 
     private void Jump()
