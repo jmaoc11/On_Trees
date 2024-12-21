@@ -8,6 +8,8 @@ public class CharacterController2D : MonoBehaviour
     [SerializeField] private Transform groundCheck;
     [SerializeField] private float groundCheckRadius = 0.2f;
     [SerializeField] private float gravityScale = 1f;
+    [SerializeField] private float skinWidth = 0.02f;        // Distance for corner checks
+    [SerializeField] private int horizontalRayCount = 4;     // Number of rays for better corner detection
 
     private Rigidbody2D rb;
     private bool isGrounded;
@@ -17,6 +19,17 @@ public class CharacterController2D : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
+        
+        // Configure physics settings for better corner handling
+        Physics2D.queriesStartInColliders = false;
+        if (GetComponent<Collider2D>() != null)
+        {
+            GetComponent<Collider2D>().sharedMaterial = new PhysicsMaterial2D 
+            { 
+                friction = 0,          // Reduce friction for smoother corner movement
+                bounciness = 0
+            };
+        }
     }
 
     void Update()
@@ -44,7 +57,7 @@ public class CharacterController2D : MonoBehaviour
 
     private void Jump()
     {
-        if (isGrounded && Input.GetButtonDown("Jump"))
+        if (isGrounded && (Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow)))
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
         }
@@ -52,6 +65,7 @@ public class CharacterController2D : MonoBehaviour
 
     private void CheckGround()
     {
+        // Use a circle overlap check instead of raycasts for more reliable ground detection
         isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
     }
 }
