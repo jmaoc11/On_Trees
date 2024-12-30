@@ -2,39 +2,67 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.Audio;
 using System.Collections.Generic;
+using System.Linq;
 
 [CustomEditor(typeof(CaptionData))]
 public class CaptionDataEditor : Editor
 {
     private AudioSource previewSource;
+    private GameObject previewObj;
     private float previewTime;
     private bool isPlaying;
     private double lastTimeSinceStartup;
 
     void OnEnable()
     {
-        // Create a temporary GameObject with an AudioSource for preview
-        GameObject previewObj = EditorUtility.CreateGameObjectWithHideFlags(
-            "AudioPreview", 
-            HideFlags.HideAndDontSave, 
-            typeof(AudioSource));
-        previewSource = previewObj.GetComponent<AudioSource>();
+        // Clean up any existing preview objects first
+        CleanupPreviewObjects();
 
-        // Configure the AudioSource
+        // Create new preview objects
+        previewObj = EditorUtility.CreateGameObjectWithHideFlags(
+            "AudioPreview", 
+            HideFlags.DontSave | HideFlags.HideInHierarchy, 
+            typeof(AudioSource));
+            
+        previewSource = previewObj.GetComponent<AudioSource>();
         previewSource.playOnAwake = false;
-        previewSource.spatialBlend = 0f; // Make it 2D audio
+        previewSource.spatialBlend = 0f;
     }
 
     void OnDisable()
     {
-        // Clean up
+        CleanupPreviewObjects();
+    }
+
+    void OnDestroy()
+    {
+        CleanupPreviewObjects();
+    }
+
+    private void CleanupPreviewObjects()
+    {
         if (previewSource != null)
         {
             if (previewSource.isPlaying)
             {
                 previewSource.Stop();
             }
-            DestroyImmediate(previewSource.gameObject);
+            previewSource = null;
+        }
+
+        if (previewObj != null)
+        {
+            DestroyImmediate(previewObj);
+            previewObj = null;
+        }
+
+        // Find and destroy any orphaned preview objects
+        var orphanedPreviews = GameObject.FindObjectsOfType<GameObject>()
+            .Where(go => go.name == "AudioPreview");
+            
+        foreach (var orphan in orphanedPreviews)
+        {
+            DestroyImmediate(orphan);
         }
     }
 
