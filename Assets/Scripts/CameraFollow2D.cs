@@ -10,10 +10,13 @@ public class CameraFollow2D : MonoBehaviour
     [SerializeField] private float boundaryThreshold = 1f;
     [SerializeField] private bool followVertically = false;
     [SerializeField] private float leftLimit = 0f;
+    [SerializeField] private float rightLimit = 10f;
     [SerializeField] private Vector2 maxPosition = new Vector2(10f, 5f);
 
     private Camera cam;
     private float initialY;
+    private float minX;
+    private float maxX;
 
     private void Start()
     {
@@ -32,9 +35,14 @@ public class CameraFollow2D : MonoBehaviour
 
         initialY = transform.position.y;
         
-        // Set initial position to respect left limit
+        // Calculate camera bounds based on orthographic size and aspect ratio
+        float cameraHalfWidth = cam.orthographicSize * cam.aspect;
+        minX = leftLimit + cameraHalfWidth;
+        maxX = rightLimit - cameraHalfWidth;
+        
+        // Set initial position to respect boundaries
         Vector3 pos = transform.position;
-        pos.x = Mathf.Max(pos.x, leftLimit + (cam.orthographicSize * cam.aspect));
+        pos.x = Mathf.Clamp(pos.x, minX, maxX);
         transform.position = pos;
     }
 
@@ -51,14 +59,11 @@ public class CameraFollow2D : MonoBehaviour
         float leftBoundary = 0.5f - (boundaryThreshold / (2f * horizExtent));
         float rightBoundary = 0.5f + (boundaryThreshold / (2f * horizExtent));
 
-        // Calculate the minimum x position based on camera's width
-        float minX = leftLimit + (cam.orthographicSize * cam.aspect);
-
         Vector3 targetPosition = currentPosition;
 
         // Move camera if target is outside boundaries
         if ((viewportPoint.x < leftBoundary && currentPosition.x > minX) || 
-            viewportPoint.x > rightBoundary)
+            (viewportPoint.x > rightBoundary && currentPosition.x < maxX))
         {
             targetPosition.x = target.position.x;
         }
@@ -68,7 +73,7 @@ public class CameraFollow2D : MonoBehaviour
         targetPosition.z = currentPosition.z;
 
         // Clamp to boundaries
-        targetPosition.x = Mathf.Clamp(targetPosition.x, minX, maxPosition.x);
+        targetPosition.x = Mathf.Clamp(targetPosition.x, minX, maxX);
         if (followVertically)
         {
             targetPosition.y = Mathf.Clamp(targetPosition.y, -maxPosition.y, maxPosition.y);
@@ -87,12 +92,15 @@ public class CameraFollow2D : MonoBehaviour
         if (!cam) cam = GetComponent<Camera>();
         if (!cam) return;
 
+        float cameraHalfWidth = cam.orthographicSize * cam.aspect;
+        float minX = leftLimit + cameraHalfWidth;
+        float maxX = rightLimit - cameraHalfWidth;
+
         // Draw camera boundaries in editor
         Gizmos.color = Color.yellow;
-        float minX = leftLimit + (cam.orthographicSize * cam.aspect);
         Gizmos.DrawWireCube(
-            new Vector3((minX + maxPosition.x) * 0.5f, 0f, 0f),
-            new Vector3(maxPosition.x - minX, maxPosition.y * 2f, 0.1f)
+            new Vector3((minX + maxX) * 0.5f, 0f, 0f),
+            new Vector3(maxX - minX, maxPosition.y * 2f, 0.1f)
         );
 
         // Draw left limit line in red
@@ -100,6 +108,12 @@ public class CameraFollow2D : MonoBehaviour
         Gizmos.DrawLine(
             new Vector3(leftLimit, -maxPosition.y, 0),
             new Vector3(leftLimit, maxPosition.y, 0)
+        );
+
+        // Draw right limit line in red
+        Gizmos.DrawLine(
+            new Vector3(rightLimit, -maxPosition.y, 0),
+            new Vector3(rightLimit, maxPosition.y, 0)
         );
     }
 }
